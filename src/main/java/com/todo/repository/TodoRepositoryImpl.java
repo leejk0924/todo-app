@@ -33,7 +33,7 @@ public class TodoRepositoryImpl implements TodoRepository {
         entity.changeTitle(todo.getTitle());
         entity.changeDescription(todo.getDescription());
         entity.changeStatus(todo.getStatus());
-        return entity;
+        return todoJpaRepository.saveAndFlush(entity);
     }
 
     @Override

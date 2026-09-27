@@ -47,6 +47,7 @@ class TodoRepositoryImplTest {
     void save_existingTodo_updatesFieldsAndKeepsCreatedAt() {
         Todo saved = todoRepository.save(Todo.create("장보기", "설명"));
         var beforeCreatedAt = saved.getCreatedAt();
+        var beforeUpdatedAt = saved.getUpdatedAt();
 
         saved.changeTitle("빨래하기");
         saved.complete();
@@ -56,6 +57,7 @@ class TodoRepositoryImplTest {
         assertThat(updated.getTitle()).isEqualTo("빨래하기");
         assertThat(updated.getStatus()).isEqualTo(Status.COMPLETED);
         assertThat(updated.getCreatedAt()).isEqualTo(beforeCreatedAt);
+        assertThat(updated.getUpdatedAt()).isAfter(beforeUpdatedAt);
     }
 
     @Test
