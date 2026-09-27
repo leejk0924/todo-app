@@ -11,6 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,14 +50,17 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("findAll 은 저장된 모든 Todo 를 반환한다")
-    void findAll_returnsAllTodos() {
+    @DisplayName("findAll 은 status, pageable 을 그대로 리포지토리에 위임한다")
+    void findAll_delegatesStatusAndPageableToRepository() {
         Todo todo = Todo.create("장보기", "설명");
-        when(todoRepository.findAll()).thenReturn(List.of(todo));
+        Pageable pageable = PageRequest.of(0, 10);
+        when(todoRepository.findAll(Status.PENDING, pageable))
+                .thenReturn(new PageImpl<>(List.of(todo), pageable, 1));
 
-        List<Todo> all = todoService.findAll();
+        Page<Todo> result = todoService.findAll(Status.PENDING, pageable);
 
-        assertThat(all).hasSize(1);
+        assertThat(result.getContent()).hasSize(1);
+        verify(todoRepository).findAll(Status.PENDING, pageable);
     }
 
     @Test

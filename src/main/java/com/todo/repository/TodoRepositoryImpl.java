@@ -1,13 +1,15 @@
 package com.todo.repository;
 
+import com.todo.domain.Status;
 import com.todo.domain.Todo;
 import com.todo.global.exception.RestApiException;
 import com.todo.global.exception.TodoErrorCode;
 import com.todo.repository.entity.TodoEntity;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -42,10 +44,11 @@ public class TodoRepositoryImpl implements TodoRepository {
     }
 
     @Override
-    public List<Todo> findAll() {
-        return todoJpaRepository.findAll().stream()
-                .map(TodoMapper::toDomain)
-                .toList();
+    public Page<Todo> findAll(Status status, Pageable pageable) {
+        Page<TodoEntity> page = (status == null)
+                ? todoJpaRepository.findAll(pageable)
+                : todoJpaRepository.findByStatus(status, pageable);
+        return page.map(TodoMapper::toDomain);
     }
 
     @Override

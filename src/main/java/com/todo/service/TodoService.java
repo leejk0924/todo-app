@@ -1,14 +1,15 @@
 package com.todo.service;
 
+import com.todo.domain.Status;
 import com.todo.domain.Todo;
 import com.todo.global.exception.RestApiException;
 import com.todo.global.exception.TodoErrorCode;
 import com.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,8 +24,8 @@ public class TodoService {
         return todoRepository.save(todo);
     }
 
-    public List<Todo> findAll() {
-        return todoRepository.findAll();
+    public Page<Todo> findAll(Status status, Pageable pageable) {
+        return todoRepository.findAll(status, pageable);
     }
 
     public Todo findById(Long id) {

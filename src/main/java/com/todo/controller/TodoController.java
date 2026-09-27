@@ -3,14 +3,17 @@ package com.todo.controller;
 import com.todo.controller.dto.TodoCreateRequest;
 import com.todo.controller.dto.TodoResponse;
 import com.todo.controller.dto.TodoUpdateRequest;
+import com.todo.domain.Status;
 import com.todo.domain.Todo;
 import com.todo.service.TodoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/todos")
@@ -27,11 +30,11 @@ public class TodoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TodoResponse>> findAll() {
-        List<TodoResponse> responses = todoService.findAll().stream()
-                .map(TodoResponse::from)
-                .toList();
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<PagedModel<TodoResponse>> findAll(
+            @RequestParam(required = false) Status status,
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        var page = todoService.findAll(status, pageable).map(TodoResponse::from);
+        return ResponseEntity.ok(new PagedModel<>(page));
     }
 
     @GetMapping("/{id}")

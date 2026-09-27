@@ -31,12 +31,21 @@ Base URL: `/api/todos`
 | 메서드 | 경로 | 설명 | 요청 본문 | 응답 본문 | 상태 코드 |
 |---|---|---|---|---|---|
 | POST | `/api/todos` | 할 일 생성 | `{title, description}` | `TodoResponse` | 201 (Location 헤더 포함), 400 |
-| GET | `/api/todos` | 목록 조회 | - | `TodoResponse[]` | 200 |
+| GET | `/api/todos` | 목록 조회 (페이지네이션 + 완료 여부 필터) | - | `PagedModel<TodoResponse>` | 200 |
 | GET | `/api/todos/{id}` | 단건 조회 | - | `TodoResponse` | 200, 404 |
 | PUT | `/api/todos/{id}` | 수정 | `{title, description}` | `TodoResponse` | 200, 400, 404 |
 | DELETE | `/api/todos/{id}` | 삭제 | - | (본문 없음) | 204, 404 |
 | PATCH | `/api/todos/{id}/complete` | 완료 처리 | - | `TodoResponse` | 200, 404 |
 | PATCH | `/api/todos/{id}/reopen` | 완료 취소(재개) | - | `TodoResponse` | 200, 404 |
+
+### `GET /api/todos` 쿼리 파라미터
+
+| 파라미터 | 설명 | 기본값 |
+|---|---|---|
+| `status` | `PENDING`/`DOING`/`COMPLETED` 중 하나로 필터링 (생략 시 전체) | 없음 |
+| `page` | 0부터 시작하는 페이지 번호 | `0` |
+| `size` | 페이지 크기 | `20` |
+| `sort` | 정렬 기준, 예: `sort=createdAt,desc` | `id,asc` |
 
 ### `TodoResponse`
 
@@ -52,6 +61,22 @@ Base URL: `/api/todos`
 ```
 
 - `status`: `PENDING`(예정) / `DOING`(진행중) / `COMPLETED`(완료) 중 하나
+
+### `PagedModel<T>`
+
+`org.springframework.data.web.PagedModel`(Spring Data 제공)로 감쌌습니다.
+
+```json
+{
+  "content": [ { "id": 1, "title": "장보기", "...": "..." } ],
+  "page": {
+    "size": 20,
+    "number": 0,
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
 
 ### 오류 응답 모양
 
@@ -88,6 +113,10 @@ Base URL: `/api/todos`
 - 삭제는 반환할 본문이 없으므로 `204 No Content`를 사용합니다.
 - 존재하지 않는 리소스에 대한 조회/수정/삭제/상태 변경은 예외 없이 전부 `404`로 응답합니다.
 - 검증 실패(빈 제목, 100자 초과)는 `400`과 함께 `errorCode`로 구체적인 사유를 알려줍니다.
+
+### 페이지네이션 설계
+
+`GET /api/todos`는 Spring Data의 `Pageable`을 그대로 받습니다. 응답은 `Page`를 직접 반환하지 않고 Spring Data가 제공하는 `PagedModel<T>`로 감쌌습니다. `Page`를 그대로 직렬화하면 `pageable`, `sort`, `empty` 등 내부 구현 세부사항까지 그대로 노출되어 API 계약이 Spring Data 구현에 종속되기 때문입니다. `status` 쿼리 파라미터로 완료 여부(정확히는 `PENDING`/`DOING`/`COMPLETED` 상태)를 필터링할 수 있습니다.
 
 ### 오류 응답을 RFC 9457로 통일한 이유
 
@@ -133,14 +162,27 @@ Content-Type: application/json
 **2) 목록 조회**
 
 ```bash
-curl -i http://localhost:8080/api/todos
+curl -i "http://localhost:8080/api/todos?page=0&size=2"
 ```
 
 ```
 HTTP/1.1 200
 Content-Type: application/json
 
-[{"id":1,"title":"장보기","description":"우유, 계란 사기","status":"PENDING","createdAt":"2026-09-28T01:08:15.026869","updatedAt":"2026-09-28T01:08:15.026869"}]
+{"content":[{"id":1,"title":"장보기","description":"설명","status":"PENDING","createdAt":"2026-09-28T01:25:47.475082","updatedAt":"2026-09-28T01:25:47.475082"},{"id":2,"title":"빨래하기","description":"설명","status":"COMPLETED","createdAt":"2026-09-28T01:25:47.550201","updatedAt":"2026-09-28T01:25:47.582541"}],"page":{"size":2,"number":0,"totalElements":3,"totalPages":2}}
+```
+
+완료된 항목만 보고 싶으면 `status` 파라미터로 필터링합니다.
+
+```bash
+curl -i "http://localhost:8080/api/todos?status=COMPLETED"
+```
+
+```
+HTTP/1.1 200
+Content-Type: application/json
+
+{"content":[{"id":2,"title":"빨래하기","description":"설명","status":"COMPLETED","createdAt":"2026-09-28T01:25:47.550201","updatedAt":"2026-09-28T01:25:47.582541"}],"page":{"size":20,"number":0,"totalElements":1,"totalPages":1}}
 ```
 
 **3) 완료 처리**

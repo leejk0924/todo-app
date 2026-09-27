@@ -72,14 +72,44 @@ class TodoControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/todos - 저장된 Todo 목록을 반환한다")
-    void findAll_returnsAllTodos() throws Exception {
+    @DisplayName("GET /api/todos - 저장된 Todo 목록을 페이지로 반환한다")
+    void findAll_returnsPagedTodos() throws Exception {
         todoRepository.save(Todo.create("장보기", "설명1"));
         todoRepository.save(Todo.create("빨래하기", "설명2"));
 
-        mockMvc.perform(get("/api/todos"))
+        mockMvc.perform(get("/api/todos").param("page", "0").param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.page.totalPages").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /api/todos - 페이지 크기만큼만 반환한다")
+    void findAll_respectsPageSize() throws Exception {
+        todoRepository.save(Todo.create("장보기", "설명1"));
+        todoRepository.save(Todo.create("빨래하기", "설명2"));
+        todoRepository.save(Todo.create("청소하기", "설명3"));
+
+        mockMvc.perform(get("/api/todos").param("page", "0").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalPages").value(2));
+    }
+
+    @Test
+    @DisplayName("GET /api/todos - status 로 완료 여부를 필터링한다")
+    void findAll_filtersByStatus() throws Exception {
+        Todo completed = todoRepository.save(Todo.create("장보기", "설명1"));
+        completed.complete();
+        todoRepository.save(completed);
+        todoRepository.save(Todo.create("빨래하기", "설명2"));
+
+        mockMvc.perform(get("/api/todos").param("status", "COMPLETED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].status").value("COMPLETED"));
     }
 
     @Test

@@ -9,8 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,14 +70,31 @@ class TodoRepositoryImplTest {
     }
 
     @Test
-    @DisplayName("findAll 은 저장된 모든 Todo 를 반환한다")
-    void findAll_returnsAllSavedTodos() {
+    @DisplayName("findAll 은 status 가 없으면 페이지 크기만큼 저장된 모든 Todo 를 반환한다")
+    void findAll_noStatusFilter_returnsPagedTodos() {
         todoRepository.save(Todo.create("장보기", "설명1"));
         todoRepository.save(Todo.create("빨래하기", "설명2"));
+        todoRepository.save(Todo.create("청소하기", "설명3"));
 
-        List<Todo> all = todoRepository.findAll();
+        Page<Todo> page = todoRepository.findAll(null, PageRequest.of(0, 2));
 
-        assertThat(all).hasSize(2);
+        assertThat(page.getContent()).hasSize(2);
+        assertThat(page.getTotalElements()).isEqualTo(3);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("findAll 은 status 로 필터링한 Todo 만 반환한다")
+    void findAll_withStatusFilter_returnsOnlyMatchingStatus() {
+        Todo completed = todoRepository.save(Todo.create("장보기", "설명1"));
+        completed.complete();
+        todoRepository.save(completed);
+        todoRepository.save(Todo.create("빨래하기", "설명2"));
+
+        Page<Todo> page = todoRepository.findAll(Status.COMPLETED, PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().get(0).getStatus()).isEqualTo(Status.COMPLETED);
     }
 
     @Test
